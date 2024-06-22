@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Webcam Analysis</title>
+    <style>
+        video, canvas {
+            display: block;
+            margin: 20px auto;
+        }
+        #capture {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+        #results {
+            text-align: center;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="text-align: center;">Webcam Analysis</h1>
+    <video id="video" width="720" height="480" autoplay></video>
+    <button id="capture">Capture</button>
+    <div id="results"></div>
+
+    <script>
+        async function postData(url = '', data = {}) {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            });
+            return response.json();
+        }
+
+        const video = document.getElementById('video');
+        const canvas = document.createElement('canvas');
+        const captureButton = document.getElementById('capture');
+        const resultsDiv = document.getElementById('results');
+
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then((stream) => {
+                video.srcObject = stream;
+            })
+            .catch((err) => {
+                console.error('Error accessing webcam: ', err);
+            });
+
+        captureButton.addEventListener('click', async () => {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+            const dataURL = canvas.toDataURL('image/jpeg');
+            
+            const response = await postData('/analyze', { frames: [dataURL] });
+            resultsDiv.innerHTML = `<p><strong>Response:</strong> ${response.response}</p><p><strong>Response to Response:</strong> ${response.response_to_response}</p>`;
+        });
+    </script>
+</body>
+</html>
