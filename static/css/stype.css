@@ -1,0 +1,44 @@
+body {
+    font-family: Arial, sans-serif;
+}
+
+.container {
+    display: flex;
+}
+
+.character-section {
+    position: relative;
+    margin-right: 20px;
+}
+
+.character-image {
+    width: 50px; /* 원하는 크기로 조정하세요 */
+    height: auto;
+}
+
+.speech-bubble {
+    position: absolute;
+    top: 10px;
+    left: 160px; /* 이미지 크기에 따라 조정하세요 */
+    width: 200px; /* 말풍선 크기 */
+    padding: 10px;
+    background: #f0f0f0;
+    border: 2px solid #333;
+    border-radius: 10px;
+    text-align: center;
+}
+
+.speech-bubble::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 20px; /* 말풍선 꼬리 위치 */
+    border-width: 10px;
+    border-style: solid;
+    border-color: transparent #f0f0f0 transparent transparent;
+    transform: translateY(-50%);
+}
+
+.content {
+    flex-grow: 1;
+}

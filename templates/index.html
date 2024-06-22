@@ -18,13 +18,92 @@
             text-align: center;
             font-size: 18px;
         }
+        .container {
+            display: flex;
+        }
+        .character-section {
+            position: relative;
+            margin-right: 20px;
+        }
+        .character-image {
+            width: 150px; /* 원하는 크기로 조정하세요 */
+            height: auto;
+        }
+        .speech-bubble {
+            position: absolute;
+            top: 10px;
+            left: 160px; /* 이미지 크기에 따라 조정하세요 */
+            width: 200px; /* 말풍선 크기 */
+            padding: 10px;
+            background: #f0f0f0;
+            border: 2px solid #333;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .speech-bubble::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: -20px; /* 말풍선 꼬리 위치 */
+            border-width: 10px;
+            border-style: solid;
+            border-color: transparent #f0f0f0 transparent transparent;
+            transform: translateY(-50%);
+        }
+        .content {
+            flex-grow: 1;
+        }
     </style>
 </head>
 <body>
-    <h1 style="text-align: center;">Webcam Analysis</h1>
-    <video id="video" width="720" height="480" autoplay></video>
-    <button id="capture">Capture</button>
-    <div id="results"></div>
+    <div class="container">
+        <div class="character-section">
+            <img src="{{ url_for('static', filename='images/character.png') }}" alt="Character" class="character-image">
+            <div class="speech-bubble" id="speechBubble">
+                Please select category
+            </div>
+        </div>
+        
+        <div class="content">
+            <h1>Checkbox Event Example</h1>
+            
+            <label>
+                <input type="checkbox" id="imageCheckbox" onchange="handleCheckboxChange('imageCheckbox')"> Image
+            </label>
+            <br>
+            
+            <label>
+                <input type="checkbox" id="videoCheckbox" onchange="handleCheckboxChange('videoCheckbox')"> Video
+            </label>
+            <br>
+            
+            <label>
+                <input type="checkbox" id="webcamCheckbox" onchange="handleCheckboxChange('webcamCheckbox')"> Webcam
+            </label>
+        
+            <div id="imageInput" style="display: none;">
+                <h2>Upload Image</h2>
+                <input type="file" id="imageFile" accept="image/*">
+                <button onclick="uploadImage()">Upload</button>
+            </div>
+
+            <div id="videoInput" style="display: none;">
+                <h2>Upload Video</h2>
+                <input type="file" id="videoFile">
+                <button onclick="uploadVideo()">Upload</button>
+            </div>
+        
+            <div id="webcamInput" style="display: none;">
+                <h2>Webcam Input</h2>
+                <video id="video" width="720" height="480" autoplay></video>
+                <button id="capture">Capture</button>
+                <div id="results"></div>
+            </div>
+        
+            <h2>Output</h2>
+            <div id="output"></div> <!-- 결과를 표시할 영역 -->
+        </div>
+    </div>
 
     <script>
         async function postData(url = '', data = {}) {
@@ -38,6 +117,40 @@
             return response.json();
         }
 
+        function handleCheckboxChange(checkboxId) {
+            var speechBubble = document.getElementById('speechBubble');
+            var imageCheckbox = document.getElementById('imageCheckbox');
+            var videoCheckbox = document.getElementById('videoCheckbox');
+            var webcamCheckbox = document.getElementById('webcamCheckbox');
+            var imageInput = document.getElementById('imageInput');
+            var videoInput = document.getElementById('videoInput');
+            var webcamInput = document.getElementById('webcamInput');
+
+            if (checkboxId === 'imageCheckbox' && imageCheckbox.checked) {
+                speechBubble.innerText = 'Please upload image';
+                imageInput.style.display = 'block';
+                videoInput.style.display = 'none';
+                webcamInput.style.display = 'none';
+            } else if (checkboxId === 'videoCheckbox' && videoCheckbox.checked) {
+                speechBubble.innerText = 'Please upload video';
+                imageInput.style.display = 'none';
+                videoInput.style.display = 'block';
+                webcamInput.style.display = 'none';
+            } else if (checkboxId === 'webcamCheckbox' && webcamCheckbox.checked) {
+                speechBubble.innerText = 'Look at the camera';
+                imageInput.style.display = 'none';
+                videoInput.style.display = 'none';
+                webcamInput.style.display = 'block';
+            } else {
+                speechBubble.innerText = 'Please select category';
+                imageInput.style.display = 'none';
+                videoInput.style.display = 'none';
+                webcamInput.style.display = 'none';
+            }
+        }
+
+        let webcamStream;
+
         const video = document.getElementById('video');
         const canvas = document.createElement('canvas');
         const captureButton = document.getElementById('capture');
@@ -45,6 +158,7 @@
 
         navigator.mediaDevices.getUserMedia({ video: true })
             .then((stream) => {
+                webcamStream = stream;
                 video.srcObject = stream;
             })
             .catch((err) => {
@@ -59,7 +173,53 @@
             
             const response = await postData('/analyze', { frames: [dataURL] });
             resultsDiv.innerHTML = `<p><strong>Response:</strong> ${response.response}</p><p><strong>Response to Response:</strong> ${response.response_to_response}</p>`;
+            document.getElementById('speechBubble').innerText = response.response_to_response; // 말풍선에 텍스트 표시
         });
+
+        async function uploadImage() {
+            var fileInput = document.getElementById('imageFile');
+            var file = fileInput.files[0];
+            if (!file) {
+                alert('Please select an image file.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onloadend = async () => {
+                const dataURL = reader.result;
+                const response = await postData('/analyze_image', { frames: [dataURL] });
+                document.getElementById('output').innerHTML = `<p><strong>Response:</strong> ${response.response}</p><p><strong>Response to Response:</strong> ${response.response_to_response}</p>`;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function uploadVideo() {
+            var fileInput = document.getElementById('videoFile');
+            var file = fileInput.files[0];
+            if (!file) {
+                alert('Please select a video file.');
+                return;
+            }
+
+            var formData = new FormData();
+            formData.append('video', file);
+
+            $.ajax({
+                url: '/upload_video',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    console.log('Video upload output:', response.output);
+                    document.getElementById('output').innerText = response.output; // 결과를 HTML 요소에 삽입
+                },
+                error: function(error) {
+                    console.log('Error:', error);
+                    document.getElementById('output').innerText = 'Error uploading video';
+                }
+            });
+        }
     </script>
 </body>
-</html>
+</html>   

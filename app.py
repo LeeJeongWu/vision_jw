@@ -81,5 +81,31 @@ def analyze():
         print(f"Error during analyze: {e}")
         return jsonify({'error': 'Error during analysis.'}), 500
 
+@app.route('/analyze_image', methods=['POST'])
+def analyze_image():
+    frames = request.json.get('frames')
+    if not frames:
+        return jsonify({'error': 'No frames provided'}), 400
+    
+    try:
+        frames = [Image.open(BytesIO(base64.b64decode(frame.split(',')[1]))) for frame in frames]
+        print(f"Frames: {frames}")  # 디버깅을 위한 프레임 출력
+        
+        # 첫 번째 추론: 행동과 감정 인식 문장 생성
+        response = asyncio.run(infer(frames, PROMPT))
+        response_text = response['choices'][0]['text'] if isinstance(response, dict) else response
+        
+        # 두 번째 추론: 인식 문장에 대한 응답 문장 생성
+        response_to_response = asyncio.run(infer([response_text], "### Reply to the above text. ###"))
+        response_to_response_text = response_to_response['choices'][0]['text'] if isinstance(response_to_response, dict) else response_to_response
+        
+        return jsonify({
+            'response': response_text,
+            'response_to_response': response_to_response_text
+        })
+    except Exception as e:
+        print(f"Error during analyze: {e}")
+        return jsonify({'error': 'Error during analysis.'}), 500
+
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=5001)
