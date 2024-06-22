@@ -80,6 +80,7 @@ def analyze():
     except Exception as e:
         print(f"Error during analyze: {e}")
         return jsonify({'error': 'Error during analysis.'}), 500
+    print("hello")
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
